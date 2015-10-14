@@ -17,18 +17,27 @@ infectionLength = 25
 
 def main():
     plt.close('all')
-    imsize = 100
+    imsize = 128
     numberOfPeople = (imsize*imsize)/5
-    print 'Number of people %i' % numberOfPeople
+   
     n_infect = 1
-    n_immune = int(0.1 * numberOfPeople)
-    numberOfPeople = numberOfPeople - n_infect - n_immune
-    
+    n_immune = int(0.5 * numberOfPeople)
+    n_free = int(0. * numberOfPeople)
+    print 'Number of people %i\n Number of vaccinated %i\n Number of freeloadrs %i' % (numberOfPeople, n_immune, n_free)
+    print n_immune+n_free    
+    numberOfPeople = numberOfPeople - n_infect - n_immune - n_free
+    print numberOfPeople
        
-    people = initPeople(imsize,numberOfPeople,n_infect,n_immune)
+    people = initPeople(imsize,
+                        numberOfPeople,
+                        n_infect,
+                        n_immune,
+                        n_free)
+                        
     image = makeImage(people,imsize)
     
     fig,ax = plt.subplots(1,1,figsize=(9,9))
+    plt.tight_layout()
  
     im = ax.imshow(image, interpolation='none')    
     fig.canvas.draw()
@@ -42,8 +51,12 @@ def main():
     
    # figman.window.setPosition(0,0)
    
-
-    for i in range(0,150):
+    t=0
+    n_dead = 0
+    mort = [(t,n_dead)]
+    while len(infectedPeople)>0 and t<500:
+        
+        t+=1        
         time.sleep(.01)
         
         for person in people:   
@@ -52,12 +65,18 @@ def main():
         infectedPeople = getInfectedPositions(people) 
         image = makeImage(people,imsize)        
         
-        for person in people:
-            if person.status == 'healthy':
+        for idx,person in enumerate(people):
+            if person.status == 'healthy' or person.status == 'freeloader':
                 NN = person.getNeighbours()
                 for pos in NN:
                     if pos in infectedPeople:
                         person.infect()
+            else:
+                if person.status == 'dead':
+                    people.pop(idx)
+                    n_dead += 1
+        
+        mort.append((t,n_dead))
                         
                 
         image = makeImage(people,imsize)  
@@ -66,6 +85,10 @@ def main():
         
         im.set_data(image)
         fig.canvas.draw()
+        
+    fig2 = plt.figure(num=2)
+    plt.plot([x[0] for x in mort],[x[1] for x in mort]) 
+    
 
 
 class pixel():
@@ -85,7 +108,9 @@ class pixel():
         
         self.statusColor = {'healthy':[0,1,0],
                        'infected':[1,0,0],
-                       'immune':[0,0,1]}
+                       'immune':[0,0,1],
+                        'freeloader':[0,1,1],
+                        'dead':[0,0,0]}
         
         self.value = self.statusColor[self.status]
         
@@ -106,8 +131,8 @@ class pixel():
             self.lengthOfInfection+=1 
         
         if self.lengthOfInfection > infectionLength:
-            self.status = 'immune'           
-            self.value = self.statusColor['immune']
+            self.status = 'dead'           
+            self.value = self.statusColor['dead']
         
     def getNeighbours(self):
         neighbours = []
@@ -140,9 +165,10 @@ def getInfectedPositions(people):
             infPos.append([person.x,person.y])
     return infPos
 
-def initPeople(imsize,numberOfPeople,n_infect,n_immune):
+def initPeople(imsize,numberOfPeople,n_infect,n_immune,n_freeloaders):
     image = []    
     people = []
+    
     for i in range(0,numberOfPeople):
         newPos = [np.random.randint(0,imsize),np.random.randint(0,imsize)]        
         people.append(pixel(imsize,newPos))
@@ -154,6 +180,10 @@ def initPeople(imsize,numberOfPeople,n_infect,n_immune):
     for i in range(0,n_immune):
         newPos = [np.random.randint(0,imsize),np.random.randint(0,imsize)]        
         people.append(pixel(imsize,newPos,status='immune'))
+        
+    for i in range(0,n_freeloaders):
+        newPos = [np.random.randint(0,imsize),np.random.randint(0,imsize)]        
+        people.append(pixel(imsize,newPos,status='freeloader'))
     
     return people
     
