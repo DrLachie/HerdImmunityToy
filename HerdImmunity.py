@@ -10,25 +10,26 @@ import numpy as np
 import time
 from matplotlib import pyplot as plt
 
-global infectionVal, immuneVal, aliveVal, infectionLength
-immuneVal = [0,0,1]
-infectionVal = [1,0,0]
+global infectionLength
+
 infectionLength = 25
-aliveVal = [0,1,0]
+
 
 def main():
     plt.close('all')
-    imsize = 64
+    imsize = 100
     numberOfPeople = (imsize*imsize)/5
-    n_infect = 5
-    n_immune = int(0.8 * numberOfPeople)
+    print 'Number of people %i' % numberOfPeople
+    n_infect = 1
+    n_immune = int(0.1 * numberOfPeople)
     numberOfPeople = numberOfPeople - n_infect - n_immune
     
        
     people = initPeople(imsize,numberOfPeople,n_infect,n_immune)
     image = makeImage(people,imsize)
     
-    fig,ax = plt.subplots(1,1)
+    fig,ax = plt.subplots(1,1,figsize=(9,9))
+ 
     im = ax.imshow(image, interpolation='none')    
     fig.canvas.draw()
     figman = plt.get_current_fig_manager()
@@ -52,14 +53,15 @@ def main():
         image = makeImage(people,imsize)        
         
         for person in people:
-            if not person.infected and not person.immune:
+            if person.status == 'healthy':
                 NN = person.getNeighbours()
                 for pos in NN:
                     if pos in infectedPeople:
-                        person.infected = True
-                        person.value = infectionVal
+                        person.infect()
+                        
                 
         image = makeImage(people,imsize)  
+        plt.title('Infected people: %i' % len(infectedPeople))
         
         
         im.set_data(image)
@@ -67,24 +69,25 @@ def main():
 
 
 class pixel():
-    def __init__(self,imageSize,position,infected=False,immune=False):
-        '''pixel has an initial position and is alive by default'''
+    def __init__(self,imageSize,position,status='healthy'):
+        '''pixel has an initial position and is healthy by default
+        Options for status are  'healthy'
+                                'infected'
+                                'immune'
+                                '''
         self.size = imageSize
         self.x = int(position[0])
         self.y = int(position[1])
         self.alive = True
-        self.infected = infected
-        self.immune = immune
-        self.value = aliveVal
+      
         self.lengthOfInfection = 0
-   
-      #  imageMap[self.x,self.y] = 1        
-        if infected:
-         #   imageMap[self.x,self.y] = 3
-            self.value = infectionVal
-        if immune:
-           # imageMap[self.x,self.y] = 2
-            self.value = immuneVal
+        self.status = status   
+        
+        self.statusColor = {'healthy':[0,1,0],
+                       'infected':[1,0,0],
+                       'immune':[0,0,1]}
+        
+        self.value = self.statusColor[self.status]
         
         
     def move(self,infectedPeoplePositions):
@@ -99,13 +102,12 @@ class pixel():
         if self.y+ymove >= 0 and self.y+ymove < self.size:                
             self.y = self.y+ymove
         
-        if self.infected:
+        if self.status == 'infected':
             self.lengthOfInfection+=1 
         
         if self.lengthOfInfection > infectionLength:
-            self.immune = True
-            self.infected = False
-            self.value = immuneVal
+            self.status = 'immune'           
+            self.value = self.statusColor['immune']
         
     def getNeighbours(self):
         neighbours = []
@@ -116,7 +118,10 @@ class pixel():
                     neighbours.append([self.x+i,self.y+j])
     #    imageMap[self.x,self.y] = self.value
         return neighbours 
-        
+    
+    def infect(self):
+        self.status = 'infected'
+        self.value = self.statusColor[self.status]
         
         
         
@@ -131,7 +136,7 @@ def makeImage(people,imageSize):
 def getInfectedPositions(people):
     infPos = []
     for person in people:
-        if person.infected:
+        if person.status == 'infected':
             infPos.append([person.x,person.y])
     return infPos
 
@@ -144,11 +149,11 @@ def initPeople(imsize,numberOfPeople,n_infect,n_immune):
     
     for i in range(0,n_infect):
         newPos = [np.random.randint(0,imsize),np.random.randint(0,imsize)]        
-        people.append(pixel(imsize,newPos,infected=True))
+        people.append(pixel(imsize,newPos,status='infected'))
     
     for i in range(0,n_immune):
         newPos = [np.random.randint(0,imsize),np.random.randint(0,imsize)]        
-        people.append(pixel(imsize,newPos,immune=True))
+        people.append(pixel(imsize,newPos,status='immune'))
     
     return people
     
