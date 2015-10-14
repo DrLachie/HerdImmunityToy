@@ -17,19 +17,19 @@ infectionLength = 25
 
 def main():
     plt.close('all')
-    imsize = 128
+    imsize = 64
     numberOfPeople = (imsize*imsize)/5
-   
+    
     n_infect = 1
     n_immune = int(0.5 * numberOfPeople)
-    n_free = int(0. * numberOfPeople)
+    n_free = int(0.15 * numberOfPeople)
     print 'Number of people %i\n Number of vaccinated %i\n Number of freeloadrs %i' % (numberOfPeople, n_immune, n_free)
     print n_immune+n_free    
-    numberOfPeople = numberOfPeople - n_infect - n_immune - n_free
-    print numberOfPeople
+    n_healthy = numberOfPeople - n_infect - n_immune - n_free
+    
        
     people = initPeople(imsize,
-                        numberOfPeople,
+                        n_healthy,
                         n_infect,
                         n_immune,
                         n_free)
@@ -57,7 +57,7 @@ def main():
     while len(infectedPeople)>0 and t<500:
         
         t+=1        
-        time.sleep(.01)
+        time.sleep(.05)
         
         for person in people:   
             person.move(infectedPeople)
@@ -88,6 +88,7 @@ def main():
         
     fig2 = plt.figure(num=2)
     plt.plot([x[0] for x in mort],[x[1] for x in mort]) 
+    plt.plot([x[0] for x in mort],[numberOfPeople - n_immune - x[1] for x in mort]) 
     
 
 
