@@ -11,17 +11,18 @@ import time
 from matplotlib import pyplot as plt
 
 global infectionVal, immuneVal, aliveVal, infectionLength
-immuneVal = 4
-infectionVal = 8
-infectionLength = 10
-aliveVal = 2
+immuneVal = [0,0,1]
+infectionVal = [1,0,0]
+infectionLength = 25
+aliveVal = [0,1,0]
 
 def main():
     plt.close('all')
     imsize = 64
     numberOfPeople = (imsize*imsize)/5
-    n_infect = 1
-    n_immune = int(0.9 * numberOfPeople)
+    n_infect = 5
+    n_immune = int(0.8 * numberOfPeople)
+    numberOfPeople = numberOfPeople - n_infect - n_immune
     
        
     people = initPeople(imsize,numberOfPeople,n_infect,n_immune)
@@ -121,7 +122,7 @@ class pixel():
         
     
 def makeImage(people,imageSize):
-    image = np.ndarray([imageSize,imageSize]) *0    
+    image = np.ndarray([imageSize,imageSize,3]) *0    
     for person in people:
         image[person.x,person.y] = person.value
     return image
