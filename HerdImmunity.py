@@ -5,7 +5,7 @@ Created on Tue Oct 13 14:51:05 2015
 @author: whitehead
 """
 
-from skimage import io, filter
+from skimage import io
 import numpy as np
 import time
 from matplotlib import pyplot as plt
@@ -18,9 +18,9 @@ aliveVal = 2
 
 def main():
     plt.close('all')
-    imsize = 128
-    numberOfPeople = (imsize*imsize)/15
-    n_infect = 10
+    imsize = 64
+    numberOfPeople = (imsize*imsize)/5
+    n_infect = 1
     n_immune = int(0.9 * numberOfPeople)
     
        
@@ -34,6 +34,10 @@ def main():
     geom = figman.window.geometry()
     x,y,dx,dy = geom.getRect()
     figman.window.setGeometry(20, 20, dx, dy)
+    
+    infectedPeople = getInfectedPositions(people) 
+    
+    
    # figman.window.setPosition(0,0)
    
 
@@ -41,16 +45,16 @@ def main():
         time.sleep(.01)
         
         for person in people:   
-            person.move(image)
+            person.move(infectedPeople)
         
+        infectedPeople = getInfectedPositions(people) 
         image = makeImage(people,imsize)        
-
+        
         for person in people:
             if not person.infected and not person.immune:
-                a = person.getNeighbours()
-                for i in a:
-                    pixval = image[i[0]][i[1]]
-                    if pixval == infectionVal:
+                NN = person.getNeighbours()
+                for pos in NN:
+                    if pos in infectedPeople:
                         person.infected = True
                         person.value = infectionVal
                 
@@ -82,7 +86,7 @@ class pixel():
             self.value = immuneVal
         
         
-    def move(self,imageMap):
+    def move(self,infectedPeoplePositions):
       #  imageMap[self.x,self.y] = 0        
        
         xmove = np.random.randint(-1,2)
@@ -123,7 +127,12 @@ def makeImage(people,imageSize):
     return image
 
 
-
+def getInfectedPositions(people):
+    infPos = []
+    for person in people:
+        if person.infected:
+            infPos.append([person.x,person.y])
+    return infPos
 
 def initPeople(imsize,numberOfPeople,n_infect,n_immune):
     image = []    
@@ -143,39 +152,4 @@ def initPeople(imsize,numberOfPeople,n_infect,n_immune):
     return people
     
 
-        
-
-def initImage(imageSize,
-              numberOfRandoms,
-              numberOfInfected = 0,
-              numberOfImmune = 0):
-                  
-    image = np.ndarray([imageSize,imageSize]) *0    
-    
-    for i in range(0,numberOfRandoms):
-        posx = int(np.random.rand() * imageSize)
-        posy = int(np.random.rand() * imageSize)
-        #print posx,posy
-        if image[posx,posy] == 0:
-            image[posx,posy] = 1
-        else:
-            pass            
-            #image[posx,posy] = image[posx,posy] + 1
-        
-    for i in range(0,numberOfInfected):
-        posx = int(np.random.rand() * imageSize)
-        posy = int(np.random.rand() * imageSize)
-        #print posx,posy
-        image[posx,posy] = infectionVal
-        
-    for i in range(0,numberOfImmune):
-        posx = int(np.random.rand() * imageSize)
-        posy = int(np.random.rand() * imageSize)
-        #print posx,posy
-        image[posx,posy] = immuneVal
-
-    return image
-    
-    
-    
 main()
