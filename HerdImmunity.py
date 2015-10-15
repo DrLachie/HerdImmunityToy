@@ -21,10 +21,9 @@ def main():
     numberOfPeople = (imsize*imsize)/5
     
     n_infect = 1
-    n_immune = int(0.5 * numberOfPeople)
-    n_free = int(0.15 * numberOfPeople)
-    print 'Number of people %i\n Number of vaccinated %i\n Number of freeloadrs %i' % (numberOfPeople, n_immune, n_free)
-    print n_immune+n_free    
+    n_immune = int(0.2 * numberOfPeople)
+    n_free = int(0.2 * numberOfPeople)
+    
     n_healthy = numberOfPeople - n_infect - n_immune - n_free
     
        
@@ -57,7 +56,7 @@ def main():
     while len(infectedPeople)>0 and t<500:
         
         t+=1        
-        time.sleep(.05)
+        time.sleep(.1)
         
         for person in people:   
             person.move(infectedPeople)
@@ -89,7 +88,7 @@ def main():
     fig2 = plt.figure(num=2)
     plt.plot([x[0] for x in mort],[x[1] for x in mort]) 
     plt.plot([x[0] for x in mort],[numberOfPeople - n_immune - x[1] for x in mort]) 
-    
+   
 
 
 class pixel():
@@ -107,10 +106,10 @@ class pixel():
         self.lengthOfInfection = 0
         self.status = status   
         
-        self.statusColor = {'healthy':[0,1,0],
-                       'infected':[1,0,0],
-                       'immune':[0,0,1],
-                        'freeloader':[0,1,1],
+        self.statusColor = {'healthy':[0,1,0],  #GREEn
+                       'infected':[1,0,0],      #RED 
+                       'immune':[0,0,1],        #BLUE
+                        'freeloader':[0,1,1],   #CYAN
                         'dead':[0,0,0]}
         
         self.value = self.statusColor[self.status]
@@ -131,9 +130,15 @@ class pixel():
         if self.status == 'infected':
             self.lengthOfInfection+=1 
         
-        if self.lengthOfInfection > infectionLength:
-            self.status = 'dead'           
-            self.value = self.statusColor['dead']
+        if self.lengthOfInfection == infectionLength:
+          
+            coinflip = np.random.rand(1)
+            if coinflip[0] < 0.1:                         
+                self.status = 'dead'                           
+            else:
+                self.status = 'immune'
+                self.lengthOfIntection = 0
+            self.value = self.statusColor[self.status]
         
     def getNeighbours(self):
         neighbours = []
