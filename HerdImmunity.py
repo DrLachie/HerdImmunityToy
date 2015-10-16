@@ -5,7 +5,6 @@ Created on Tue Oct 13 14:51:05 2015
 @author: whitehead
 """
 
-from skimage import io
 import numpy as np
 import time
 from matplotlib import pyplot as plt
@@ -17,16 +16,28 @@ infectionLength = 25
 
 def main():
     plt.close('all')
-    imsize = 64
-    numberOfPeople = (imsize*imsize)/5
+    imsize = 128
+    numberOfPeople = int((imsize*imsize)/4)
     
     n_infect = 1
-    n_immune = int(0.2 * numberOfPeople)
-    n_free = int(0.2 * numberOfPeople)
+    n_healthy = numberOfPeople - n_infect
     
-    n_healthy = numberOfPeople - n_infect - n_immune - n_free
+    n_immune = int(.9 * n_healthy)
+    n_free = int(.3 * n_immune)
     
-       
+    n_immune = n_immune - n_free
+    
+    n_healthy = n_healthy - n_immune - n_free
+    status = ('\nStarting Conditions\nTotal people: %i\t'
+              'Healthy people: %d\n'
+              'Immunised: %d\t'
+              'Freeloaders: %d' % (numberOfPeople,
+                                  float(n_healthy)/1,
+                                  float(n_immune)/1,
+                                  float(n_free)/1))
+    print status
+    
+     
     people = initPeople(imsize,
                         n_healthy,
                         n_infect,
@@ -43,7 +54,9 @@ def main():
     figman = plt.get_current_fig_manager()
     geom = figman.window.geometry()
     x,y,dx,dy = geom.getRect()
-    figman.window.setGeometry(20, 20, dx, dy)
+    figman.window.setGeometry(20, 50, dx, dy+50)
+    plt.show()
+    
     
     infectedPeople = getInfectedPositions(people) 
     
@@ -51,12 +64,12 @@ def main():
    # figman.window.setPosition(0,0)
    
     t=0
-    n_dead = 0
-    mort = [(t,n_dead)]
+    mort = [(t,0,n_infect)]
     while len(infectedPeople)>0 and t<500:
+        n_dead = 0
         
         t+=1        
-        time.sleep(.1)
+        time.sleep(.001)
         
         for person in people:   
             person.move(infectedPeople)
@@ -67,27 +80,33 @@ def main():
         for idx,person in enumerate(people):
             if person.status == 'healthy' or person.status == 'freeloader':
                 NN = person.getNeighbours()
-                for pos in NN:
-                    if pos in infectedPeople:
-                        person.infect()
+                if len(set(NN).intersection(infectedPeople)) > 0:
+                    person.infect()
             else:
                 if person.status == 'dead':
-                    people.pop(idx)
+                    #people.pop(idx)
                     n_dead += 1
+                    
         
-        mort.append((t,n_dead))
+        mort.append((t,n_dead,len(infectedPeople)))
                         
                 
         image = makeImage(people,imsize)  
-        plt.title('Infected people: %i' % len(infectedPeople))
+        plt.title('Infected people: %i\nPeople killed %i' % 
+                    (len(infectedPeople),n_dead))
         
         
         im.set_data(image)
-        fig.canvas.draw()
-        
+        plt.draw()
+     
+    
     fig2 = plt.figure(num=2)
     plt.plot([x[0] for x in mort],[x[1] for x in mort]) 
-    plt.plot([x[0] for x in mort],[numberOfPeople - n_immune - x[1] for x in mort]) 
+    plt.plot([x[0] for x in mort],[x[2] for x in mort])
+    figman = plt.get_current_fig_manager()
+    geom = figman.window.geometry()
+    x,y,dx,dy = geom.getRect()
+    figman.window.setGeometry(20, 900, dx, dy)   
    
 
 
@@ -109,36 +128,36 @@ class pixel():
         self.statusColor = {'healthy':[0,1,0],  #GREEn
                        'infected':[1,0,0],      #RED 
                        'immune':[0,0,1],        #BLUE
-                        'freeloader':[0,1,1],   #CYAN
-                        'dead':[0,0,0]}
+                        'freeloader':[1,0,1],   #CYAN
+                        'dead':[.5,.1,.1]}
         
         self.value = self.statusColor[self.status]
         
         
+        
     def move(self,infectedPeoplePositions):
       #  imageMap[self.x,self.y] = 0        
-       
-        xmove = np.random.randint(-1,2)
-        ymove = np.random.randint(-1,2)
-        
-        if self.x+xmove >= 0 and self.x+xmove < self.size:        
-            self.x = self.x+xmove
+        if not self.status == 'dead':
+            xmove = np.random.randint(-1,2)
+            ymove = np.random.randint(-1,2)
             
-        if self.y+ymove >= 0 and self.y+ymove < self.size:                
-            self.y = self.y+ymove
-        
-        if self.status == 'infected':
-            self.lengthOfInfection+=1 
-        
-        if self.lengthOfInfection == infectionLength:
-          
-            coinflip = np.random.rand(1)
-            if coinflip[0] < 0.1:                         
-                self.status = 'dead'                           
-            else:
-                self.status = 'immune'
-                self.lengthOfIntection = 0
-            self.value = self.statusColor[self.status]
+            if self.x+xmove >= 0 and self.x+xmove < self.size:        
+                self.x = self.x+xmove
+                
+            if self.y+ymove >= 0 and self.y+ymove < self.size:                
+                self.y = self.y+ymove
+            
+            if self.status == 'infected':
+                self.lengthOfInfection+=1 
+            
+                if self.lengthOfInfection >= infectionLength:              
+                    coinflip = np.random.rand(1)
+                    if coinflip[0] < 0.95:                                 
+                        self.status = 'dead'                           
+                    else:                    
+                        self.status = 'immune'
+                        self.lengthOfInfection = 0
+                    self.value = self.statusColor[self.status]
         
     def getNeighbours(self):
         neighbours = []
@@ -146,7 +165,7 @@ class pixel():
             for j in range(-1,2):
                 newx,newy = self.x+i,self.y+1
                 if newx>=0 and newy>=0 and newx<self.size and newy<self.size:
-                    neighbours.append([self.x+i,self.y+j])
+                    neighbours.append((self.x+i,self.y+j))
     #    imageMap[self.x,self.y] = self.value
         return neighbours 
     
@@ -158,7 +177,7 @@ class pixel():
         
     
 def makeImage(people,imageSize):
-    image = np.ndarray([imageSize,imageSize,3]) *0    
+    image = np.zeros([imageSize,imageSize,3])  
     for person in people:
         image[person.x,person.y] = person.value
     return image
@@ -168,7 +187,7 @@ def getInfectedPositions(people):
     infPos = []
     for person in people:
         if person.status == 'infected':
-            infPos.append([person.x,person.y])
+            infPos.append((person.x,person.y))
     return infPos
 
 def initPeople(imsize,numberOfPeople,n_infect,n_immune,n_freeloaders):
