@@ -10,6 +10,16 @@ import time
 from matplotlib import pyplot as plt    
     
 def main():
+    repeats = 10
+    tStore = []
+    healthSurvStore = []
+    freeSurvStore = []
+    
+
+
+
+
+def runSim():
     tic = time.time()
     imsize = 128
     people,im = setupAndGetPeople(imsize,
@@ -17,31 +27,42 @@ def main():
                                   n_infect = 1, #number of initial infections
                                   fraction_immune = .8,
                                   fraction_freeloader = .5,   #fraction of immune who choose note to
-                                  deathRate = 1. #chance of death from infection
-                                  )                          
+                                  deathRate = 1.0, #chance of death from infection
+                                  batch = True)                          
                                                               
-    runLoop(people,
-            im,
-            imsize,
-            maxTime = 1000,
-            liveUpdate = True
-            )
+    t,healthySurvivePercent,freeSurvivePercent = runLoop(people,
+                                                         im,
+                                                         imsize,
+                                                         maxTime = 1000,
+                                                         batch = True
+                                                         )
+
+    
     #draw again at the end       
-    image = makeImage(people,imsize)
-    im.set_data(image)
-    plt.draw()
+    #image = makeImage(people,imsize)
+    #im.set_data(image)
+    #plt.draw()
     
     elapsed = time.time() - tic
     print '%f seconds to run' % elapsed
+    return t,healthySurvivePercent,freeSurvivePercent
   
 def runLoop(people,
             im,
             imsize,
             maxTime = 500,
-            liveUpdate = True):
+            liveUpdate = True,
+            mortalityGraph = True,
+            batch = False):
+
+    if batch:
+        '''batch over-rides other options'''
+        liveUpdate = False
+        mortalityGraph = False 
+                
     healthyStart = len([x for x in people if x.status == 'healthy'])
     freeloadStart = len([x for x in people if x.status == 'freeloader'])    
-    print freeloadStart    
+       
     t=0
     infectedPeople = getInfectedPositions(people) 
     mort = [(t,len(infectedPeople),1)]
@@ -80,15 +101,15 @@ def runLoop(people,
             im.set_data(image)
             plt.draw()
     
-    
-    plt.figure(num=2)
-    plt.plot([x[0] for x in mort],[x[1] for x in mort]) 
-    plt.plot([x[0] for x in mort],[x[2] for x in mort])
-    figman = plt.get_current_fig_manager()
-    geom = figman.window.geometry()
-    x0,y0,dx,dy = geom.getRect()
-    figman.window.setGeometry(20, 900, dx, dy)   
-    
+    if mortalityGraph:
+        plt.figure(num=2)
+        plt.plot([x[0] for x in mort],[x[1] for x in mort]) 
+        plt.plot([x[0] for x in mort],[x[2] for x in mort])
+        figman = plt.get_current_fig_manager()
+        geom = figman.window.geometry()
+        x0,y0,dx,dy = geom.getRect()
+        figman.window.setGeometry(20, 900, dx, dy)   
+        
     
     healthySurvivors = len([x for x in people if x.status == 'healthy'])
     freeloadSurvivors = len([x for x in people if x.status == 'freeloader'])
@@ -104,15 +125,16 @@ def runLoop(people,
     print '%.2f%% of un-vaccinateable survived' % healthySurvivePercent
     print '%.2f%% of freeloaders survived' % freeloadSurvivePercent
     
-    
+    return t, healthySurvivePercent, freeloadSurvivePercent
 
 def setupAndGetPeople(imsize = 128,
-          fraction = 4,
-          n_infect = 1,
-          fraction_immune = .3,
-          fraction_freeloader = .1,
-          deathRate = .1):
-              
+                      fraction = 4,
+                      n_infect = 1,
+                      fraction_immune = .3,
+                      fraction_freeloader = .1,
+                      deathRate = .1,
+                      batch = False):
+                          
     plt.close('all')
     numberOfPeople = int((imsize*imsize)/fraction)
   
@@ -134,18 +156,21 @@ def setupAndGetPeople(imsize = 128,
      
     people = initPeople(imsize,n_healthy,n_infect,n_immune,n_free,deathRate)
     
-    image = makeImage(people,imsize)
-    
-    fig,ax = plt.subplots(1,1,figsize=(9,9))
-    plt.tight_layout()
- 
-    im = ax.imshow(image, interpolation='none')    
-    fig.canvas.draw()
-    figman = plt.get_current_fig_manager()
-    geom = figman.window.geometry()
-    x,y,dx,dy = geom.getRect()
-    figman.window.setGeometry(20, 50, dx, dy+50)
-    plt.show()
+    if not batch:
+        image = makeImage(people,imsize)
+        
+        fig,ax = plt.subplots(1,1,figsize=(9,9))
+        plt.tight_layout()
+     
+        im = ax.imshow(image, interpolation='none')    
+        fig.canvas.draw()
+        figman = plt.get_current_fig_manager()
+        geom = figman.window.geometry()
+        x,y,dx,dy = geom.getRect()
+        figman.window.setGeometry(20, 50, dx, dy+50)
+        plt.show()
+    else:
+        im = 0
     return people,im
                       
 
@@ -253,4 +278,4 @@ def initPeople(imsize,numberOfPeople,n_infect,n_immune,n_freeloaders,deathRate):
     return people
     
 
-main()
+runSim()
