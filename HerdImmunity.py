@@ -9,73 +9,58 @@ import numpy as np
 import time
 from matplotlib import pyplot as plt
 
+
 global infectionLength
 
 infectionLength = 25
 
 
+    
+    
 def main():
-    plt.close('all')
+    tic = time.time()
     imsize = 128
-    numberOfPeople = int((imsize*imsize)/4)
-    
-    n_infect = 1
-    n_healthy = numberOfPeople - n_infect
-    
-    n_immune = int(.9 * n_healthy)
-    n_free = int(.3 * n_immune)
-    
-    n_immune = n_immune - n_free
-    
-    n_healthy = n_healthy - n_immune - n_free
-    status = ('\nStarting Conditions\nTotal people: %i\t'
-              'Healthy people: %d\n'
-              'Immunised: %d\t'
-              'Freeloaders: %d' % (numberOfPeople,
-                                  float(n_healthy)/1,
-                                  float(n_immune)/1,
-                                  float(n_free)/1))
-    print status
-    
-     
-    people = initPeople(imsize,
-                        n_healthy,
-                        n_infect,
-                        n_immune,
-                        n_free)
-                        
+    people,im = setupAndGetPeople(imsize,
+                                  fraction = 4, #density of people
+                                  n_infect = 1, #number of initial infections
+                                  fraction_immune = .3,
+                                  fraction_freeloader = .1  #fraction of immune
+                                  )                         #who choose note to  
+                                                              
+    runLoop(people,
+            im,
+            imsize,
+            maxTime = 1000,
+            liveUpdate = True
+            )
+            
     image = makeImage(people,imsize)
+    im.set_data(image)
+    plt.draw()
     
-    fig,ax = plt.subplots(1,1,figsize=(9,9))
-    plt.tight_layout()
- 
-    im = ax.imshow(image, interpolation='none')    
-    fig.canvas.draw()
-    figman = plt.get_current_fig_manager()
-    geom = figman.window.geometry()
-    x,y,dx,dy = geom.getRect()
-    figman.window.setGeometry(20, 50, dx, dy+50)
-    plt.show()
-    
-    
-    infectedPeople = getInfectedPositions(people) 
-    
-    
-   # figman.window.setPosition(0,0)
-   
+    elapsed = time.time() - tic
+    print '%f seconds to run' % elapsed
+  
+def runLoop(people,
+            im,
+            imsize,
+            maxTime = 500,
+            liveUpdate = True):
     t=0
-    mort = [(t,0,n_infect)]
-    while len(infectedPeople)>0 and t<500:
+    infectedPeople = getInfectedPositions(people) 
+    mort = [(t,len(infectedPeople),1)]
+    while len(infectedPeople)>0 and t<maxTime:
         n_dead = 0
         
-        t+=1        
-        time.sleep(.001)
+        t+=1  
+        if liveUpdate:
+            time.sleep(.001)
         
         for person in people:   
             person.move(infectedPeople)
         
         infectedPeople = getInfectedPositions(people) 
-        image = makeImage(people,imsize)        
+            
         
         for idx,person in enumerate(people):
             if person.status == 'healthy' or person.status == 'freeloader':
@@ -91,16 +76,16 @@ def main():
         mort.append((t,n_dead,len(infectedPeople)))
                         
                 
-        image = makeImage(people,imsize)  
-        plt.title('Infected people: %i\nPeople killed %i' % 
-                    (len(infectedPeople),n_dead))
+        if liveUpdate: 
+            plt.title('Infected people: %i\nPeople killed %i' % 
+                        (len(infectedPeople),n_dead))
         
-        
-        im.set_data(image)
-        plt.draw()
+            image = makeImage(people,imsize)
+            im.set_data(image)
+            plt.draw()
      
     
-    fig2 = plt.figure(num=2)
+    plt.figure(num=2)
     plt.plot([x[0] for x in mort],[x[1] for x in mort]) 
     plt.plot([x[0] for x in mort],[x[2] for x in mort])
     figman = plt.get_current_fig_manager()
@@ -109,6 +94,47 @@ def main():
     figman.window.setGeometry(20, 900, dx, dy)   
    
 
+def setupAndGetPeople(imsize = 128,
+          fraction = 4,
+          n_infect = 1,
+          fraction_immune = .3,
+          fraction_freeloader = .1):
+              
+    plt.close('all')
+    numberOfPeople = int((imsize*imsize)/fraction)
+  
+    n_healthy = numberOfPeople - n_infect
+    n_immune = int(fraction_immune * n_healthy)
+    n_free = int(fraction_freeloader * n_immune)
+    n_immune = n_immune - n_free
+    
+    n_healthy = n_healthy - n_immune - n_free
+    status = ('\nStarting Conditions\nTotal people: %i\t'
+              'Healthy people: %d\n'
+              'Immunised: %d\t'
+              'Freeloaders: %d' % (numberOfPeople,
+                                  float(n_healthy)/1,
+                                  float(n_immune)/1,
+                                  float(n_free)/1))
+    print status
+    
+     
+    people = initPeople(imsize,n_healthy,n_infect,n_immune,n_free)
+    
+    image = makeImage(people,imsize)
+    
+    fig,ax = plt.subplots(1,1,figsize=(9,9))
+    plt.tight_layout()
+ 
+    im = ax.imshow(image, interpolation='none')    
+    fig.canvas.draw()
+    figman = plt.get_current_fig_manager()
+    geom = figman.window.geometry()
+    x,y,dx,dy = geom.getRect()
+    figman.window.setGeometry(20, 50, dx, dy+50)
+    plt.show()
+    return people,im
+                      
 
 class pixel():
     def __init__(self,imageSize,position,status='healthy'):
