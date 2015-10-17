@@ -7,15 +7,7 @@ Created on Tue Oct 13 14:51:05 2015
 
 import numpy as np
 import time
-from matplotlib import pyplot as plt
-
-
-global infectionLength
-
-infectionLength = 25
-
-
-    
+from matplotlib import pyplot as plt    
     
 def main():
     tic = time.time()
@@ -23,9 +15,10 @@ def main():
     people,im = setupAndGetPeople(imsize,
                                   fraction = 4, #density of people
                                   n_infect = 1, #number of initial infections
-                                  fraction_immune = .3,
-                                  fraction_freeloader = .1  #fraction of immune
-                                  )                         #who choose note to  
+                                  fraction_immune = .8,
+                                  fraction_freeloader = .5,   #fraction of immune who choose note to
+                                  deathRate = 1. #chance of death from infection
+                                  )                          
                                                               
     runLoop(people,
             im,
@@ -33,7 +26,7 @@ def main():
             maxTime = 1000,
             liveUpdate = True
             )
-            
+    #draw again at the end       
     image = makeImage(people,imsize)
     im.set_data(image)
     plt.draw()
@@ -46,6 +39,9 @@ def runLoop(people,
             imsize,
             maxTime = 500,
             liveUpdate = True):
+    healthyStart = len([x for x in people if x.status == 'healthy'])
+    freeloadStart = len([x for x in people if x.status == 'freeloader'])    
+    print freeloadStart    
     t=0
     infectedPeople = getInfectedPositions(people) 
     mort = [(t,len(infectedPeople),1)]
@@ -62,7 +58,7 @@ def runLoop(people,
         infectedPeople = getInfectedPositions(people) 
             
         
-        for idx,person in enumerate(people):
+        for person in people:
             if person.status == 'healthy' or person.status == 'freeloader':
                 NN = person.getNeighbours()
                 if len(set(NN).intersection(infectedPeople)) > 0:
@@ -83,22 +79,39 @@ def runLoop(people,
             image = makeImage(people,imsize)
             im.set_data(image)
             plt.draw()
-     
+    
     
     plt.figure(num=2)
     plt.plot([x[0] for x in mort],[x[1] for x in mort]) 
     plt.plot([x[0] for x in mort],[x[2] for x in mort])
     figman = plt.get_current_fig_manager()
     geom = figman.window.geometry()
-    x,y,dx,dy = geom.getRect()
+    x0,y0,dx,dy = geom.getRect()
     figman.window.setGeometry(20, 900, dx, dy)   
-   
+    
+    
+    healthySurvivors = len([x for x in people if x.status == 'healthy'])
+    freeloadSurvivors = len([x for x in people if x.status == 'freeloader'])
+
+    healthySurvivePercent = (100.*(float(healthySurvivors) / healthyStart))
+    try:    
+        freeloadSurvivePercent = (100.*(float(freeloadSurvivors) / freeloadStart))  
+    except:
+        freeloadSurvivePercent = -1.0
+        
+        
+    print 'Virus survived for %i rounds' % t
+    print '%.2f%% of un-vaccinateable survived' % healthySurvivePercent
+    print '%.2f%% of freeloaders survived' % freeloadSurvivePercent
+    
+    
 
 def setupAndGetPeople(imsize = 128,
           fraction = 4,
           n_infect = 1,
           fraction_immune = .3,
-          fraction_freeloader = .1):
+          fraction_freeloader = .1,
+          deathRate = .1):
               
     plt.close('all')
     numberOfPeople = int((imsize*imsize)/fraction)
@@ -119,7 +132,7 @@ def setupAndGetPeople(imsize = 128,
     print status
     
      
-    people = initPeople(imsize,n_healthy,n_infect,n_immune,n_free)
+    people = initPeople(imsize,n_healthy,n_infect,n_immune,n_free,deathRate)
     
     image = makeImage(people,imsize)
     
@@ -137,7 +150,7 @@ def setupAndGetPeople(imsize = 128,
                       
 
 class pixel():
-    def __init__(self,imageSize,position,status='healthy'):
+    def __init__(self,imageSize,position,status='healthy',deathRate=.1):
         '''pixel has an initial position and is healthy by default
         Options for status are  'healthy'
                                 'infected'
@@ -158,10 +171,11 @@ class pixel():
                         'dead':[.5,.1,.1]}
         
         self.value = self.statusColor[self.status]
-        
+        self.deathrate = deathRate
         
         
     def move(self,infectedPeoplePositions):
+        infectionLength = 25
       #  imageMap[self.x,self.y] = 0        
         if not self.status == 'dead':
             xmove = np.random.randint(-1,2)
@@ -216,8 +230,8 @@ def getInfectedPositions(people):
             infPos.append((person.x,person.y))
     return infPos
 
-def initPeople(imsize,numberOfPeople,n_infect,n_immune,n_freeloaders):
-    image = []    
+def initPeople(imsize,numberOfPeople,n_infect,n_immune,n_freeloaders,deathRate):
+   
     people = []
     
     for i in range(0,numberOfPeople):
