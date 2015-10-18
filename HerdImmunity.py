@@ -9,32 +9,53 @@ import numpy as np
 import time
 from matplotlib import pyplot as plt    
     
+
 def main():
+    tStore = []
+    healthSurvStore = []
+    freeSurvStore = []
+    valRange = np.arange(.5,1,.025)    
+    
+    for immunity in valRange:
+        t,h,f = repeatSimAndAverage(5,immunity)  
+        tStore.append(t)
+        healthSurvStore.append(h)
+        freeSurvStore.append(f)
+        
+        
+    plt.plot(valRange,healthSurvStore)
+    
+def repeatSimAndAverage(repeats,valueToAlter):
     repeats = 10
     tStore = []
     healthSurvStore = []
     freeSurvStore = []
+    for repeat in range(0,repeats):
+        t,h,f = runSim(True,valueToAlter)
+        tStore.append(t)
+        healthSurvStore.append(h)
+        freeSurvStore.append(f)
+    return np.mean(tStore), np.mean(healthSurvStore), np.mean(freeSurvStore)
     
 
-
-
-
-def runSim():
+def runSim(doBatch,value):
     tic = time.time()
-    imsize = 128
+    imsize = 64
     people,im = setupAndGetPeople(imsize,
                                   fraction = 4, #density of people
                                   n_infect = 1, #number of initial infections
-                                  fraction_immune = .8,
-                                  fraction_freeloader = .5,   #fraction of immune who choose note to
+                                  fraction_immune = value,
+                                  fraction_freeloader = .0,   #fraction of immune who choose note to
                                   deathRate = 1.0, #chance of death from infection
-                                  batch = True)                          
-                                                              
+                                  batch = doBatch)                          
+    if not doBatch:
+        time.sleep(1)                                                           
+        
     t,healthySurvivePercent,freeSurvivePercent = runLoop(people,
                                                          im,
                                                          imsize,
                                                          maxTime = 1000,
-                                                         batch = True
+                                                         batch = doBatch
                                                          )
 
     
@@ -42,7 +63,8 @@ def runSim():
     #image = makeImage(people,imsize)
     #im.set_data(image)
     #plt.draw()
-    
+   
+        
     elapsed = time.time() - tic
     print '%f seconds to run' % elapsed
     return t,healthySurvivePercent,freeSurvivePercent
@@ -121,9 +143,9 @@ def runLoop(people,
         freeloadSurvivePercent = -1.0
         
         
-    print 'Virus survived for %i rounds' % t
-    print '%.2f%% of un-vaccinateable survived' % healthySurvivePercent
-    print '%.2f%% of freeloaders survived' % freeloadSurvivePercent
+   # print 'Virus survived for %i rounds' % t
+  #  print '%.2f%% of un-vaccinateable survived' % healthySurvivePercent
+   # print '%.2f%% of freeloaders survived' % freeloadSurvivePercent
     
     return t, healthySurvivePercent, freeloadSurvivePercent
 
@@ -278,4 +300,5 @@ def initPeople(imsize,numberOfPeople,n_infect,n_immune,n_freeloaders,deathRate):
     return people
     
 
-runSim()
+#runSim(False)
+main()
