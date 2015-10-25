@@ -15,10 +15,10 @@ def main():
     tStore = []
     healthSurvStore = []
     freeSurvStore = []
-    valRange = np.arange(.0 ,1,.01)    
+    valRange = np.arange(.0 ,1,.1)    
     
     for immunity in valRange:
-        t,h,f = repeatSimAndAverage(100,immunity)  
+        t,h,f = repeatSimAndAverage(20,immunity)  
         tStore.append(t)
         healthSurvStore.append(h)
         freeSurvStore.append(f)
@@ -65,7 +65,7 @@ def runSim(doBatch,value):
     tic = time.time()
     imsize = 32
     people,im = setupAndGetPeople(imsize,
-                                  fraction = 2, #density of people
+                                  fraction = 4, #density of people
                                   n_infect = 1, #number of initial infections
                                   fraction_immune = value,
                                   fraction_freeloader = 0.0,   #fraction of immune who choose note to
